@@ -2,7 +2,7 @@ use crate::lexer::Lexer;
 use crate::token::TokenType;
 use std::io::{self, BufRead, Write};
 
-const PROMPT: &str = ">> ";
+const PROMPT: &str = ">>> ";
 
 pub fn start() {
     let stdin = io::stdin();

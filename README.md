@@ -4,7 +4,7 @@ A programming language interpreter written in Rust.
 
 ## Status
 
-Early development — lexer complete, parser and evaluator in progress.
+Early development — lexer and parser complete, evaluator in progress.
 
 ## Usage
 
@@ -12,9 +12,10 @@ Early development — lexer complete, parser and evaluator in progress.
 cargo run
 ```
 
-Starts a REPL. Type expressions at the `>>` prompt to see the token stream.
+Starts a REPL. Type expressions at the `>>` prompt to see the parsed AST string form. If the
+input is syntactically invalid, the REPL prints parser errors instead.
 
 ## Roadmap
 
-- [ ] Parser / AST
+- [x] Parser / AST
 - [ ] Evaluator

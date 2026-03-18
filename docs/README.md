@@ -5,5 +5,6 @@ These notes capture the main decisions behind Nyx as they are supported by the c
 - [Project Foundation](project-foundation.md)
 - [Iteration Strategy](iteration-strategy.md)
 - [Language Scope](language-scope.md)
+- [Parser Design](parser-design.md)
 - [Rust Code Decisions](rust-code-decisions.md)
 - [Validation](validation.md)

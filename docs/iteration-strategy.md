@@ -2,14 +2,21 @@
 
 ## Decision
 
-I chose to build the project in clear stages, starting with a working lexer and a simple REPL before moving on to the parser and evaluator.
+I chose to build the project in clear stages: lexer first, then a parser milestone that makes
+syntax structure visible in the REPL, and only after that the evaluator.
 
 ## Why I Made It
 
-The lexer gives me an early milestone that is concrete and easy to verify. A REPL makes that work immediately visible because I can type input and see how the language front end responds. Printing tokens at this stage is a practical way to check progress while later stages of the interpreter are still unfinished.
+The lexer gives me an early milestone that is concrete and easy to verify. The parser is the
+next milestone because it turns token streams into a real program structure and forces the
+language front end to handle precedence, block structure, and higher-level syntax. Using the
+REPL to print the parsed program keeps each stage immediately visible while evaluation is
+still unfinished.
 
 ## What This Means Right Now
 
 - Running the project starts an interactive loop instead of executing full programs.
-- The current feedback loop is based on token output, not evaluated results.
-- The README correctly presents the parser and evaluator as work still in progress.
+- The current feedback loop is based on parsed output and parser errors, not evaluated
+  results.
+- The parser is treated as a complete milestone, while evaluation remains the next major
+  phase.

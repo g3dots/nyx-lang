@@ -2,21 +2,26 @@
 
 ## Decision
 
-I chose to validate the front end in layers: keep the lexer covered by an end-to-end token
-test, and add a parser suite that checks AST shape and operator precedence across the full
-syntax Nyx currently parses.
+I validate the interpreter in layers: the lexer has an end-to-end token test, the parser has a
+structural test suite covering AST shape and operator precedence, and the evaluator has a
+comprehensive test suite covering all expression types, data structures, control flow, closures,
+built-in functions, and error handling.
 
 ## Why I Made It
 
-For the lexer, broad token coverage is more useful early on than a large number of tiny
-isolated cases. For the parser, broad structural coverage matters more: the tests need to
-prove that precedence, grouped expressions, functions, calls, and conditionals all produce
-the intended tree. A parser test suite that exercises those combinations acts like a compact
-specification for the front end and makes regressions easy to spot.
+Each layer has different failure modes. Lexer tests catch tokenization regressions. Parser tests
+verify that precedence, grouping, and new syntax forms produce the intended tree. Evaluator tests
+verify that the full pipeline — lex, parse, evaluate — produces correct values. Together they
+form a compact specification for the language.
+
+The evaluator tests cover integer arithmetic, boolean logic, prefix and infix operators,
+if/else, return statements, error messages, let bindings, function application, closures,
+strings, string concatenation, built-in functions, arrays, array indexing, hashes, hash indexing,
+assignment, while loops, for loops, recursive functions, and higher-order functions.
 
 ## What This Means Right Now
 
-- The lexer has a concrete correctness target instead of only manual REPL checking.
-- The parser has a concrete correctness target for AST structure, precedence, and syntax
-  coverage.
-- `cargo test` now validates both tokenization and parsing before evaluator work begins.
+- `cargo test` validates tokenization, parsing, and evaluation.
+- New language features can be added with confidence that existing behavior is preserved.
+- The evaluator test suite acts as both a regression guard and a usage reference for the
+  language.

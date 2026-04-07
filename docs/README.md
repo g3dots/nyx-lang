@@ -6,5 +6,8 @@ These notes capture the main decisions behind Nyx as they are supported by the c
 - [Iteration Strategy](iteration-strategy.md)
 - [Language Scope](language-scope.md)
 - [Parser Design](parser-design.md)
+- [Evaluator Design](evaluator-design.md)
+- [Environment and Closures](environment-and-closures.md)
+- [Loops and Assignment](loops-and-assignment.md)
 - [Rust Code Decisions](rust-code-decisions.md)
 - [Validation](validation.md)

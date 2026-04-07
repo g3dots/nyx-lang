@@ -1,7 +1,8 @@
 use crate::ast::{
-    BlockStatement, BooleanLiteral, CallExpression, Expression, ExpressionStatement,
-    FunctionLiteral, Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement,
-    PrefixExpression, Program, ReturnStatement, Statement,
+    ArrayLiteralExpr, BlockStatement, BooleanLiteral, CallExpression, Expression,
+    ExpressionStatement, ForExpression, FunctionLiteral, HashLiteralExpr, Identifier,
+    IfExpression, IndexExpression, InfixExpression, IntegerLiteral, LetStatement,
+    PrefixExpression, Program, ReturnStatement, Statement, StringLiteralExpr, WhileExpression,
 };
 use crate::lexer::Lexer;
 use crate::token::{Token, TokenType};
@@ -13,12 +14,14 @@ type InfixParseFn = fn(&mut Parser, Expression) -> Option<Expression>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     Lowest,
+    Assign,
     Equals,
     LessGreater,
     Sum,
     Product,
     Prefix,
     Call,
+    Index,
 }
 
 pub struct Parser {
@@ -50,6 +53,11 @@ impl Parser {
         parser.register_prefix(TokenType::LParen, Parser::parse_grouped_expression);
         parser.register_prefix(TokenType::If, Parser::parse_if_expression);
         parser.register_prefix(TokenType::Function, Parser::parse_function_literal);
+        parser.register_prefix(TokenType::StringLiteral, Parser::parse_string_literal);
+        parser.register_prefix(TokenType::LBracket, Parser::parse_array_literal);
+        parser.register_prefix(TokenType::LBrace, Parser::parse_hash_literal);
+        parser.register_prefix(TokenType::While, Parser::parse_while_expression);
+        parser.register_prefix(TokenType::For, Parser::parse_for_expression);
 
         parser.register_infix(TokenType::Plus, Parser::parse_infix_expression);
         parser.register_infix(TokenType::Minus, Parser::parse_infix_expression);
@@ -60,6 +68,8 @@ impl Parser {
         parser.register_infix(TokenType::Lt, Parser::parse_infix_expression);
         parser.register_infix(TokenType::Gt, Parser::parse_infix_expression);
         parser.register_infix(TokenType::LParen, Parser::parse_call_expression);
+        parser.register_infix(TokenType::LBracket, Parser::parse_index_expression);
+        parser.register_infix(TokenType::Assign, Parser::parse_infix_expression);
 
         parser.next_token();
         parser.next_token();
@@ -365,32 +375,157 @@ impl Parser {
         Some(Expression::Call(CallExpression {
             token: self.cur_token.clone(),
             function: Box::new(function),
-            arguments: self.parse_call_arguments()?,
+            arguments: self.parse_expression_list(TokenType::RParen)?,
         }))
     }
 
-    fn parse_call_arguments(&mut self) -> Option<Vec<Expression>> {
-        let mut arguments = Vec::new();
+    fn parse_expression_list(&mut self, end: TokenType) -> Option<Vec<Expression>> {
+        let mut list = Vec::new();
 
-        if self.peek_token_is(TokenType::RParen) {
+        if self.peek_token_is(end) {
             self.next_token();
-            return Some(arguments);
+            return Some(list);
         }
 
         self.next_token();
-        arguments.push(self.parse_expression(Precedence::Lowest)?);
+        list.push(self.parse_expression(Precedence::Lowest)?);
 
         while self.peek_token_is(TokenType::Comma) {
             self.next_token();
             self.next_token();
-            arguments.push(self.parse_expression(Precedence::Lowest)?);
+            list.push(self.parse_expression(Precedence::Lowest)?);
         }
+
+        if !self.expect_peek(end) {
+            return None;
+        }
+
+        Some(list)
+    }
+
+    fn parse_string_literal(&mut self) -> Option<Expression> {
+        Some(Expression::StringLiteral(StringLiteralExpr {
+            token: self.cur_token.clone(),
+            value: self.cur_token.literal.clone(),
+        }))
+    }
+
+    fn parse_array_literal(&mut self) -> Option<Expression> {
+        Some(Expression::ArrayLiteral(ArrayLiteralExpr {
+            token: self.cur_token.clone(),
+            elements: self.parse_expression_list(TokenType::RBracket)?,
+        }))
+    }
+
+    fn parse_index_expression(&mut self, left: Expression) -> Option<Expression> {
+        let token = self.cur_token.clone();
+        self.next_token();
+        let index = self.parse_expression(Precedence::Lowest)?;
+
+        if !self.expect_peek(TokenType::RBracket) {
+            return None;
+        }
+
+        Some(Expression::Index(IndexExpression {
+            token,
+            left: Box::new(left),
+            index: Box::new(index),
+        }))
+    }
+
+    fn parse_hash_literal(&mut self) -> Option<Expression> {
+        let token = self.cur_token.clone();
+        let mut pairs = Vec::new();
+
+        while !self.peek_token_is(TokenType::RBrace) {
+            self.next_token();
+            let key = self.parse_expression(Precedence::Lowest)?;
+
+            if !self.expect_peek(TokenType::Colon) {
+                return None;
+            }
+
+            self.next_token();
+            let value = self.parse_expression(Precedence::Lowest)?;
+            pairs.push((key, value));
+
+            if !self.peek_token_is(TokenType::RBrace) && !self.expect_peek(TokenType::Comma) {
+                return None;
+            }
+        }
+
+        if !self.expect_peek(TokenType::RBrace) {
+            return None;
+        }
+
+        Some(Expression::HashLiteral(HashLiteralExpr { token, pairs }))
+    }
+
+    fn parse_while_expression(&mut self) -> Option<Expression> {
+        let token = self.cur_token.clone();
+
+        if !self.expect_peek(TokenType::LParen) {
+            return None;
+        }
+
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Lowest)?;
 
         if !self.expect_peek(TokenType::RParen) {
             return None;
         }
 
-        Some(arguments)
+        if !self.expect_peek(TokenType::LBrace) {
+            return None;
+        }
+
+        let body = self.parse_block_statement();
+
+        Some(Expression::While(WhileExpression {
+            token,
+            condition: Box::new(condition),
+            body,
+        }))
+    }
+
+    fn parse_for_expression(&mut self) -> Option<Expression> {
+        let token = self.cur_token.clone();
+
+        if !self.expect_peek(TokenType::LParen) {
+            return None;
+        }
+
+        self.next_token();
+        let init = self.parse_statement()?;
+
+        // semicolon after init is consumed by parse_statement
+        self.next_token();
+        let condition = self.parse_expression(Precedence::Lowest)?;
+
+        if !self.expect_peek(TokenType::Semicolon) {
+            return None;
+        }
+
+        self.next_token();
+        let update = self.parse_expression(Precedence::Lowest)?;
+
+        if !self.expect_peek(TokenType::RParen) {
+            return None;
+        }
+
+        if !self.expect_peek(TokenType::LBrace) {
+            return None;
+        }
+
+        let body = self.parse_block_statement();
+
+        Some(Expression::For(ForExpression {
+            token,
+            init: Box::new(init),
+            condition: Box::new(condition),
+            update: Box::new(update),
+            body,
+        }))
     }
 
     fn register_prefix(&mut self, token_type: TokenType, function: PrefixParseFn) {
@@ -444,11 +579,13 @@ impl Parser {
 
 fn precedence_for(token_type: TokenType) -> Precedence {
     match token_type {
+        TokenType::Assign => Precedence::Assign,
         TokenType::Eq | TokenType::NotEq => Precedence::Equals,
         TokenType::Lt | TokenType::Gt => Precedence::LessGreater,
         TokenType::Plus | TokenType::Minus => Precedence::Sum,
         TokenType::Slash | TokenType::Asterisk => Precedence::Product,
         TokenType::LParen => Precedence::Call,
+        TokenType::LBracket => Precedence::Index,
         _ => Precedence::Lowest,
     }
 }

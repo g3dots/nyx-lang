@@ -1,5 +1,6 @@
 use nyx::ast::{
     Expression, ExpressionStatement, FunctionLiteral, Identifier, IfExpression, Program, Statement,
+    WhileExpression,
 };
 use nyx::lexer::Lexer;
 use nyx::parser::Parser;
@@ -562,5 +563,141 @@ fn check_parser_errors(parser: &Parser) {
     panic!("parser had errors: {:?}", parser.errors());
 }
 
+#[test]
+fn test_string_literal_expression() {
+    let program = parse_program(r#""hello world";"#);
+    assert_eq!(program.statements.len(), 1);
+
+    let statement = expect_expression_statement(&program.statements[0]);
+    let Expression::StringLiteral(string_lit) = &statement.expression else {
+        panic!("expression was not string literal");
+    };
+    assert_eq!(string_lit.value, "hello world");
+}
+
+#[test]
+fn test_array_literal_parsing() {
+    let program = parse_program("[1, 2 * 2, 3 + 3]");
+    assert_eq!(program.statements.len(), 1);
+
+    let statement = expect_expression_statement(&program.statements[0]);
+    let Expression::ArrayLiteral(array) = &statement.expression else {
+        panic!("expression was not array literal");
+    };
+    assert_eq!(array.elements.len(), 3);
+    assert!(test_integer_literal(&array.elements[0], 1));
+    assert!(test_infix_expression(
+        &array.elements[1],
+        LiteralExpectation::Int(2),
+        "*",
+        LiteralExpectation::Int(2),
+    ));
+    assert!(test_infix_expression(
+        &array.elements[2],
+        LiteralExpectation::Int(3),
+        "+",
+        LiteralExpectation::Int(3),
+    ));
+}
+
+#[test]
+fn test_index_expression_parsing() {
+    let program = parse_program("myArray[1 + 1]");
+    assert_eq!(program.statements.len(), 1);
+
+    let statement = expect_expression_statement(&program.statements[0]);
+    let Expression::Index(index_expr) = &statement.expression else {
+        panic!("expression was not index expression");
+    };
+    assert!(test_identifier(&index_expr.left, "myArray"));
+    assert!(test_infix_expression(
+        &index_expr.index,
+        LiteralExpectation::Int(1),
+        "+",
+        LiteralExpectation::Int(1),
+    ));
+}
+
+#[test]
+fn test_hash_literal_parsing() {
+    let program = parse_program(r#"{"one": 1, "two": 2, "three": 3}"#);
+    assert_eq!(program.statements.len(), 1);
+
+    let statement = expect_expression_statement(&program.statements[0]);
+    let Expression::HashLiteral(hash) = &statement.expression else {
+        panic!("expression was not hash literal");
+    };
+    assert_eq!(hash.pairs.len(), 3);
+}
+
+#[test]
+fn test_empty_hash_literal() {
+    let program = parse_program("{}");
+    assert_eq!(program.statements.len(), 1);
+
+    let statement = expect_expression_statement(&program.statements[0]);
+    let Expression::HashLiteral(hash) = &statement.expression else {
+        panic!("expression was not hash literal");
+    };
+    assert_eq!(hash.pairs.len(), 0);
+}
+
+#[test]
+fn test_while_expression_parsing() {
+    let program = parse_program("while (x < 10) { x }");
+    assert_eq!(program.statements.len(), 1);
+
+    let statement = expect_expression_statement(&program.statements[0]);
+    let Expression::While(while_expr) = &statement.expression else {
+        panic!("expression was not while");
+    };
+
+    assert!(test_infix_expression(
+        &while_expr.condition,
+        LiteralExpectation::Ident("x"),
+        "<",
+        LiteralExpectation::Int(10),
+    ));
+    assert_eq!(while_expr.body.statements.len(), 1);
+}
+
+#[test]
+fn test_for_expression_parsing() {
+    let program = parse_program("for (let i = 0; i < 10; i = i + 1) { x }");
+    assert_eq!(program.statements.len(), 1);
+
+    let statement = expect_expression_statement(&program.statements[0]);
+    let Expression::For(for_expr) = &statement.expression else {
+        panic!("expression was not for");
+    };
+
+    let Statement::Let(init) = &*for_expr.init else {
+        panic!("for init was not let statement");
+    };
+    assert_eq!(init.name.value, "i");
+
+    assert!(test_infix_expression(
+        &for_expr.condition,
+        LiteralExpectation::Ident("i"),
+        "<",
+        LiteralExpectation::Int(10),
+    ));
+
+    assert_eq!(for_expr.body.statements.len(), 1);
+}
+
+#[test]
+fn test_operator_precedence_with_index() {
+    let tests = [
+        ("a * [1, 2, 3, 4][b * c] * d", "((a * ([1, 2, 3, 4][(b * c)])) * d)"),
+        ("add(a * b[2], b[1], 2 * [1, 2][1])", "add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))"),
+    ];
+
+    for (input, expected) in tests {
+        let program = parse_program(input);
+        assert_eq!(program.to_string(), expected);
+    }
+}
+
 #[allow(dead_code)]
-fn _assert_ast_types(_: &Identifier, _: &IfExpression, _: &FunctionLiteral) {}
+fn _assert_ast_types(_: &Identifier, _: &IfExpression, _: &FunctionLiteral, _: &WhileExpression) {}

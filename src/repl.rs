@@ -1,13 +1,19 @@
+use crate::environment::Environment;
+use crate::evaluator;
 use crate::lexer::Lexer;
+use crate::object::Object;
 use crate::parser::Parser;
+use std::cell::RefCell;
 use std::io::{self, BufRead, Write};
+use std::rc::Rc;
 
 const PROMPT: &str = ">> ";
-const NYX_BANNER: &str = ".:: nyx parser ::.";
+const NYX_BANNER: &str = ".:: nyx ::.";
 
 pub fn start() {
     let stdin = io::stdin();
     let stdout = io::stdout();
+    let env = Rc::new(RefCell::new(Environment::new()));
 
     loop {
         print!("{}", PROMPT);
@@ -15,7 +21,7 @@ pub fn start() {
 
         let mut line = String::new();
         match stdin.lock().read_line(&mut line) {
-            Ok(0) => return, // EOF
+            Ok(0) => return,
             Ok(_) => {}
             Err(e) => {
                 eprintln!("Error reading input: {e}");
@@ -32,7 +38,10 @@ pub fn start() {
             continue;
         }
 
-        println!("{program}");
+        let evaluated = evaluator::eval(&program, &env);
+        if !matches!(evaluated, Object::Null) {
+            println!("{evaluated}");
+        }
     }
 }
 

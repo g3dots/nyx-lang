@@ -51,10 +51,17 @@ impl Lexer {
             b'>' => Token::new(TokenType::Gt, ">"),
             b';' => Token::new(TokenType::Semicolon, ";"),
             b',' => Token::new(TokenType::Comma, ","),
+            b':' => Token::new(TokenType::Colon, ":"),
             b'{' => Token::new(TokenType::LBrace, "{"),
             b'}' => Token::new(TokenType::RBrace, "}"),
             b'(' => Token::new(TokenType::LParen, "("),
             b')' => Token::new(TokenType::RParen, ")"),
+            b'[' => Token::new(TokenType::LBracket, "["),
+            b']' => Token::new(TokenType::RBracket, "]"),
+            b'"' => {
+                let string_val = self.read_string();
+                Token::new(TokenType::StringLiteral, string_val)
+            }
             0 => Token::new(TokenType::Eof, ""),
             ch if is_letter(ch) => {
                 let literal = self.read_identifier();
@@ -108,6 +115,17 @@ impl Lexer {
         let start = self.position;
         while is_digit(self.ch) {
             self.read_char();
+        }
+        String::from_utf8(self.input[start..self.position].to_vec()).unwrap()
+    }
+
+    fn read_string(&mut self) -> String {
+        let start = self.position + 1;
+        loop {
+            self.read_char();
+            if self.ch == b'"' || self.ch == 0 {
+                break;
+            }
         }
         String::from_utf8(self.input[start..self.position].to_vec()).unwrap()
     }

@@ -22,6 +22,12 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
+"foobar"
+"foo bar"
+[1, 2];
+{"foo": "bar"}
+while (x < 10) {}
+for (let i = 0; i < 10; i) {}
 "#;
 
     let tests: Vec<(TokenType, &str)> = vec![
@@ -98,6 +104,47 @@ if (5 < 10) {
         (TokenType::NotEq, "!="),
         (TokenType::Int, "9"),
         (TokenType::Semicolon, ";"),
+        // strings
+        (TokenType::StringLiteral, "foobar"),
+        (TokenType::StringLiteral, "foo bar"),
+        // arrays
+        (TokenType::LBracket, "["),
+        (TokenType::Int, "1"),
+        (TokenType::Comma, ","),
+        (TokenType::Int, "2"),
+        (TokenType::RBracket, "]"),
+        (TokenType::Semicolon, ";"),
+        // hashes
+        (TokenType::LBrace, "{"),
+        (TokenType::StringLiteral, "foo"),
+        (TokenType::Colon, ":"),
+        (TokenType::StringLiteral, "bar"),
+        (TokenType::RBrace, "}"),
+        // while
+        (TokenType::While, "while"),
+        (TokenType::LParen, "("),
+        (TokenType::Ident, "x"),
+        (TokenType::Lt, "<"),
+        (TokenType::Int, "10"),
+        (TokenType::RParen, ")"),
+        (TokenType::LBrace, "{"),
+        (TokenType::RBrace, "}"),
+        // for
+        (TokenType::For, "for"),
+        (TokenType::LParen, "("),
+        (TokenType::Let, "let"),
+        (TokenType::Ident, "i"),
+        (TokenType::Assign, "="),
+        (TokenType::Int, "0"),
+        (TokenType::Semicolon, ";"),
+        (TokenType::Ident, "i"),
+        (TokenType::Lt, "<"),
+        (TokenType::Int, "10"),
+        (TokenType::Semicolon, ";"),
+        (TokenType::Ident, "i"),
+        (TokenType::RParen, ")"),
+        (TokenType::LBrace, "{"),
+        (TokenType::RBrace, "}"),
         (TokenType::Eof, ""),
     ];
 

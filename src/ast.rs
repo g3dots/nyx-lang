@@ -143,6 +143,12 @@ pub enum Expression {
     If(IfExpression),
     Function(FunctionLiteral),
     Call(CallExpression),
+    StringLiteral(StringLiteralExpr),
+    ArrayLiteral(ArrayLiteralExpr),
+    Index(IndexExpression),
+    HashLiteral(HashLiteralExpr),
+    While(WhileExpression),
+    For(ForExpression),
 }
 
 impl Expression {
@@ -156,6 +162,12 @@ impl Expression {
             Expression::If(expression) => expression.token_literal(),
             Expression::Function(expression) => expression.token_literal(),
             Expression::Call(expression) => expression.token_literal(),
+            Expression::StringLiteral(expression) => expression.token_literal(),
+            Expression::ArrayLiteral(expression) => expression.token_literal(),
+            Expression::Index(expression) => expression.token_literal(),
+            Expression::HashLiteral(expression) => expression.token_literal(),
+            Expression::While(expression) => expression.token_literal(),
+            Expression::For(expression) => expression.token_literal(),
         }
     }
 }
@@ -171,6 +183,12 @@ impl fmt::Display for Expression {
             Expression::If(expression) => write!(f, "{expression}"),
             Expression::Function(expression) => write!(f, "{expression}"),
             Expression::Call(expression) => write!(f, "{expression}"),
+            Expression::StringLiteral(expression) => write!(f, "{expression}"),
+            Expression::ArrayLiteral(expression) => write!(f, "{expression}"),
+            Expression::Index(expression) => write!(f, "{expression}"),
+            Expression::HashLiteral(expression) => write!(f, "{expression}"),
+            Expression::While(expression) => write!(f, "{expression}"),
+            Expression::For(expression) => write!(f, "{expression}"),
         }
     }
 }
@@ -339,5 +357,134 @@ impl fmt::Display for CallExpression {
             .collect::<Vec<_>>()
             .join(", ");
         write!(f, "{}({arguments})", self.function)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StringLiteralExpr {
+    pub token: Token,
+    pub value: String,
+}
+
+impl StringLiteralExpr {
+    pub fn token_literal(&self) -> &str {
+        &self.token.literal
+    }
+}
+
+impl fmt::Display for StringLiteralExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "\"{}\"", self.value)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArrayLiteralExpr {
+    pub token: Token,
+    pub elements: Vec<Expression>,
+}
+
+impl ArrayLiteralExpr {
+    pub fn token_literal(&self) -> &str {
+        &self.token.literal
+    }
+}
+
+impl fmt::Display for ArrayLiteralExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let elements = self
+            .elements
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        write!(f, "[{elements}]")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IndexExpression {
+    pub token: Token,
+    pub left: Box<Expression>,
+    pub index: Box<Expression>,
+}
+
+impl IndexExpression {
+    pub fn token_literal(&self) -> &str {
+        &self.token.literal
+    }
+}
+
+impl fmt::Display for IndexExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}[{}])", self.left, self.index)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HashLiteralExpr {
+    pub token: Token,
+    pub pairs: Vec<(Expression, Expression)>,
+}
+
+impl HashLiteralExpr {
+    pub fn token_literal(&self) -> &str {
+        &self.token.literal
+    }
+}
+
+impl fmt::Display for HashLiteralExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let pairs = self
+            .pairs
+            .iter()
+            .map(|(k, v)| format!("{k}:{v}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        write!(f, "{{{pairs}}}")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WhileExpression {
+    pub token: Token,
+    pub condition: Box<Expression>,
+    pub body: BlockStatement,
+}
+
+impl WhileExpression {
+    pub fn token_literal(&self) -> &str {
+        &self.token.literal
+    }
+}
+
+impl fmt::Display for WhileExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "while({}) {}", self.condition, self.body)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ForExpression {
+    pub token: Token,
+    pub init: Box<Statement>,
+    pub condition: Box<Expression>,
+    pub update: Box<Expression>,
+    pub body: BlockStatement,
+}
+
+impl ForExpression {
+    pub fn token_literal(&self) -> &str {
+        &self.token.literal
+    }
+}
+
+impl fmt::Display for ForExpression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "for({}; {}; {}) {}",
+            self.init, self.condition, self.update, self.body
+        )
     }
 }
